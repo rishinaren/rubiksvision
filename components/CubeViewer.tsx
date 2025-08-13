@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { loadAnimCube } from "@/lib/loader";
-import { FaceColors } from "@/lib/facelets";
+import type { FaceColors } from "@/lib/facelets";
 
 export default function CubeViewer({
   size,

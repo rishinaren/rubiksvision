@@ -1,10 +1,13 @@
+import { buildAnimCubeFacelets } from "@/lib/facelets";
+
 let cvLoaded: Promise<void> | null = null;
 export function loadOpenCV(): Promise<void> {
   if (cvLoaded) return cvLoaded;
   cvLoaded = new Promise((resolve, reject) => {
     import("@techstark/opencv-js")
       .then(() => {
-        const wait = () => ((globalThis as any).cv ? resolve() : setTimeout(wait, 30));
+        const wait = () =>
+          (globalThis as any).cv ? resolve() : setTimeout(wait, 30);
         wait();
       })
       .catch(reject);
@@ -34,16 +37,17 @@ export async function loadAnimCube(
 
   // Compute size: full card width, fixed height unless caller overrides
   const width = Math.max(320, Math.round(opts.width ?? mount.clientWidth || 320));
-  const height = Math.max(320, Math.round(opts.height ?? 360));
+  const height = Math.max(320, Math.round(opts.height ?? 380));
 
   // Load the correct AnimCube script (self-host if you prefer)
   const scriptTagId = `animcube-lib-${size}`;
   if (!document.getElementById(scriptTagId)) {
     const s = document.createElement("script");
     s.id = scriptTagId;
-    s.src = size === 2
-      ? "https://animcubejs.cubing.net/AnimCube2.js"
-      : "https://animcubejs.cubing.net/AnimCube3.js";
+    s.src =
+      size === 2
+        ? "https://animcubejs.cubing.net/AnimCube2.js"
+        : "https://animcubejs.cubing.net/AnimCube3.js";
     document.head.appendChild(s);
     await new Promise((r) => (s.onload = () => r(null)));
   }
@@ -61,14 +65,15 @@ export async function loadAnimCube(
   });
 
   if (opts.faces) {
-    const { buildAnimCubeFacelets } = await import("@/lib/facelets");
     params.set("facelets", buildAnimCubeFacelets(opts.faces));
   }
 
   // Clear and run the init script inside the mount (AnimCube renders into div#id)
   mount.innerHTML = "";
   const initScript = document.createElement("script");
-  initScript.text = `${size === 2 ? "AnimCube2" : "AnimCube3"}("${params.toString()}")`;
+  initScript.text = `${
+    size === 2 ? "AnimCube2" : "AnimCube3"
+  }("${params.toString()}")`;
   mount.appendChild(initScript);
 
   // Cleanup

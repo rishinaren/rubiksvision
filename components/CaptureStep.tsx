@@ -1,7 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { analyzeImageGrid } from "@/lib/colors";
-import { ColorLetter, FaceColors, FaceKey, emptyFaceColors, colorLetterToHex, supportedPalette } from "@/lib/facelets";
+import {
+  ColorLetter,
+  FaceColors,
+  FaceKey,
+  emptyFaceColors,
+  colorLetterToHex,
+  supportedPalette,
+} from "@/lib/facelets";
+import { Field } from "./Ui";
 
 const ORDER: FaceKey[] = ["U", "R", "F", "D", "L", "B"]; // capture sequence
 
@@ -41,7 +49,7 @@ export default function CaptureStep({
           await videoRef.current.play();
         }
       } catch {
-        // silently fail; could show message
+        // Optional: show a message if camera isn't available/allowed
       }
     })();
     return () => {
@@ -71,9 +79,8 @@ export default function CaptureStep({
   // Allow fixing individual stickers before confirm
   const clickSticker = (i: number, j: number) => {
     if (!detected) return;
-    const palette = supportedPalette;
-    const idx = palette.indexOf(detected[i][j]);
-    const next = palette[(idx + 1) % palette.length];
+    const idx = supportedPalette.indexOf(detected[i][j]);
+    const next = supportedPalette[(idx + 1) % supportedPalette.length];
     const copy = detected.map((row) => row.slice()) as ColorLetter[][];
     copy[i][j] = next;
     setDetected(copy);
@@ -97,68 +104,85 @@ export default function CaptureStep({
 
   return (
     <div className="grid" style={{ gap: 12 }}>
-      <div className="card">
-        <h3>Capture face {step + 1} of 6 — <span style={{ letterSpacing: 1 }}>{capturingFace}</span></h3>
-        <p className="small">
-          Point your cube at the camera. Keep the face flat and centered. Tap <b>Snap</b>, review our read, and either
-          <b> Confirm</b> or <b>Retake</b>. You can click any sticker to fix its color before confirming.
-        </p>
-
-        {/* Live camera */}
-        {!previewUrl && (
-          <div className="grid" style={{ gap: 8 }}>
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              style={{ width: "100%", maxHeight: 360, background: "#0b0e14", borderRadius: 12 }}
-            />
-            <div>
-              <button className="btn" onClick={snap}>Snap</button>
-            </div>
+      <div className="row" style={{ alignItems: "end" }}>
+        <Field label={`Capture face ${step + 1} of 6 (${capturingFace})`}>
+          <div className="row">
+            <button className="btn" onClick={snap}>
+              Snap
+            </button>
           </div>
-        )}
-
-        {/* Snapshot review with editable grid */}
-        {previewUrl && detected && (
-          <div className="row" style={{ alignItems: "flex-start" }}>
-            <div className="card" style={{ background: "#0b0e14" }}>
-              <img src={previewUrl} alt="captured face" style={{ maxWidth: 380, borderRadius: 8 }} />
-            </div>
-            <div className="card">
-              <h4>Our read (click stickers to change)</h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${size}, 40px)`,
-                  gap: 6,
-                }}
-              >
-                {detected.flatMap((row, i) =>
-                  row.map((c, j) => (
-                    <button
-                      key={`${i}-${j}`}
-                      onClick={() => clickSticker(i, j)}
-                      title={`[${i},${j}]`}
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 6,
-                        border: "1px solid #2a3147",
-                        background: colorLetterToHex[c],
-                      }}
-                    />
-                  )),
-                )}
-              </div>
-              <div className="row" style={{ marginTop: 10 }}>
-                <button className="btn" onClick={confirmFace}>Confirm</button>
-                <button className="btn secondary" onClick={retake}>Retake</button>
-              </div>
-            </div>
+        </Field>
+        {previewUrl && (
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn" onClick={confirmFace}>
+              Confirm
+            </button>
+            <button className="btn secondary" onClick={retake}>
+              Retake
+            </button>
           </div>
         )}
       </div>
+
+      {/* Live camera view */}
+      {!previewUrl && (
+        <div className="card" style={{ background: "#0b0e14" }}>
+          <video
+            ref={videoRef}
+            style={{ width: "100%", maxHeight: 360, borderRadius: 8 }}
+            muted
+            playsInline
+          />
+        </div>
+      )}
+
+      {/* Snapshot review with editable grid */}
+      {previewUrl && detected && (
+        <div className="row" style={{ alignItems: "flex-start" }}>
+          <div className="card" style={{ background: "#0b0e14" }}>
+            <img
+              src={previewUrl}
+              alt="captured face"
+              style={{ maxWidth: 380, borderRadius: 8 }}
+            />
+          </div>
+          <div className="card">
+            <h4>Our read (click stickers to change)</h4>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${size}, 40px)`,
+                gap: 6,
+              }}
+            >
+              {detected.flatMap((row, i) =>
+                row.map((c, j) => (
+                  <button
+                    key={`${i}-${j}`}
+                    onClick={() => clickSticker(i, j)}
+                    title={`[${i},${j}]`}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 6,
+                      border: "1px solid #2a3147",
+                      background: colorLetterToHex[c],
+                    }}
+                  />
+                ))
+              )}
+            </div>
+            <div className="row" style={{ marginTop: 10 }}>
+              <button className="btn" onClick={confirmFace}>
+                Confirm
+              </button>
+              <button className="btn secondary" onClick={retake}>
+                Retake
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
