@@ -10,7 +10,7 @@ import { loadOpenCV } from "@/lib/loader";
 
 export default function Page() {
   const [size, setSize] = useState<2 | 3>(3);
-  const [faces, setFaces] = useState<FaceColors | null>(null); // U,R,F,D,L,B each 3×3/2×2 arrays
+  const [faces, setFaces] = useState<FaceColors | null>(null); // U,R,F,D,L,B
   const [moves, setMoves] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,6 @@ export default function Page() {
     setError(null);
     setBusy(true);
     try {
-      // Always compute a valid 3×3 facelet string; 2×2 is embedded into a 3×3 corner-equivalent state
       const f3 = size === 2 ? embed2x2Into3x3(faces) : faces;
       const facelets = buildURFDLBFromFaces(f3, 3);
       const { solve3x3 } = await import("@/workers/solve3x3.worker");
@@ -41,8 +40,8 @@ export default function Page() {
 
       {!faces && (
         <div className="card">
-          <h2>1) Scan faces (6 photos)</h2>
-          <p className="small">Good indoor lighting works best. Align the face within the overlay and confirm each photo.</p>
+          <h2>1) Scan faces (webcam or 6 photos)</h2>
+          <p className="small">Good indoor lighting works best. Align the face within the overlay and confirm each capture.</p>
           <CaptureStep size={size} onScanned={onScanned} loadOpenCV={loadOpenCV} />
         </div>
       )}
@@ -70,7 +69,7 @@ export default function Page() {
 
       <div className="card">
         <h2>Live 3D Cube</h2>
-        <CubeViewer size={size} moves={moves} />
+        <CubeViewer size={size} faces={faces} moves={moves} />
       </div>
     </div>
   );
