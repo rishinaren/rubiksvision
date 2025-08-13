@@ -5,7 +5,12 @@ import CaptureStep from "@/components/CaptureStep";
 import FaceGridEditor from "@/components/FaceGridEditor";
 import CubeViewer from "@/components/CubeViewer";
 import SolvePlayer from "@/components/SolvePlayer";
-import { buildURFDLBFromFaces, FaceColors, supportedPalette, embed2x2Into3x3 } from "@/lib/facelets";
+import {
+  buildURFDLBFromFaces,
+  FaceColors,
+  supportedPalette,
+  embed2x2Into3x3,
+} from "@/lib/facelets";
 import { loadOpenCV } from "@/lib/loader";
 
 export default function Page() {
@@ -28,7 +33,9 @@ export default function Page() {
       const solution = await solve3x3(facelets);
       setMoves(solution);
     } catch (e: any) {
-      setError(e?.message ?? "Unsolvable or invalid state. Please edit colors and try again.");
+      setError(
+        e?.message ?? "Unsolvable or invalid state. Please edit colors and try again."
+      );
     } finally {
       setBusy(false);
     }
@@ -40,8 +47,11 @@ export default function Page() {
 
       {!faces && (
         <div className="card">
-          <h2>1) Scan faces (webcam or 6 photos)</h2>
-          <p className="small">Good indoor lighting works best. Align the face within the overlay and confirm each capture.</p>
+          <h2>1) Scan faces (webcam)</h2>
+          <p className="small">
+            You’ll see a live camera view below. Snap each side, fix any tiles,
+            then confirm.
+          </p>
           <CaptureStep size={size} onScanned={onScanned} loadOpenCV={loadOpenCV} />
         </div>
       )}
@@ -49,15 +59,26 @@ export default function Page() {
       {faces && (
         <div className="row">
           <div className="card" style={{ flex: 1, minWidth: 420 }}>
-            <h2>2) Confirm & fix colors</h2>
-            <FaceGridEditor size={size} faces={faces} onChange={setFaces} palette={supportedPalette} />
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button className="btn secondary" onClick={() => setFaces(null)}>Retake</button>
+            <h2>2) Confirm &amp; fix colors</h2>
+            <FaceGridEditor
+              size={size}
+              faces={faces}
+              onChange={setFaces}
+              palette={supportedPalette}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button className="btn secondary" onClick={() => setFaces(null)}>
+                Retake
+              </button>
               <button className="btn" onClick={onSolve} disabled={busy}>
                 {busy ? "Solving…" : "Solve"}
               </button>
             </div>
-            {error && <p className="small" style={{ color: '#f87171' }}>{error}</p>}
+            {error && (
+              <p className="small" style={{ color: "#f87171" }}>
+                {error}
+              </p>
+            )}
           </div>
 
           <div className="card" style={{ flex: 1, minWidth: 420 }}>
