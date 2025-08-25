@@ -9,19 +9,34 @@ import {
   colorLetterToHex,
   supportedPalette,
 } from "@/lib/facelets";
-import { Field } from "./Ui";
 
-const ORDER: FaceKey[] = ["U", "R", "F", "D", "L", "B"]; // capture sequence
+const ORDER: FaceKey[] = ["U", "R", "F", "D", "L", "B"];
+const FACE_LABELS: Record<FaceKey, string> = {
+  U: "Up (White center)",
+  R: "Right (Red center)",  
+  F: "Front (Green center)",
+  D: "Down (Yellow center)",
+  L: "Left (Orange center)",
+  B: "Back (Blue center)",
+};
+
+const FACE_INSTRUCTIONS: Record<FaceKey, string> = {
+  U: "Hold the cube with the white center facing up towards the camera",
+  R: "Hold the cube with the red center facing towards the camera", 
+  F: "Hold the cube with the green center facing towards the camera",
+  D: "Hold the cube with the yellow center facing towards the camera",
+  L: "Hold the cube with the orange center facing towards the camera", 
+  B: "Hold the cube with the blue center facing towards the camera",
+};
 
 export default function CaptureStep({
-  size,
   onScanned,
   loadOpenCV,
 }: {
-  size: 2 | 3;
   onScanned: (faces: FaceColors) => void;
   loadOpenCV: () => Promise<void>;
 }) {
+  const size = 3; // Hardcoded to 3x3 only
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -29,40 +44,47 @@ export default function CaptureStep({
   const [step, setStep] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [detected, setDetected] = useState<ColorLetter[][] | null>(null);
-  const capturingFace = ORDER[step];
+  const [stage, setStage] = useState<'capture' | 'review'>('capture');
+  
+  const currentFace = ORDER[step];
 
   // Request camera on mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "environment" } 
         });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
+        if (cancelled) return;
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
       } catch {
-        // Optional: show a message if camera isn't available/allowed
+        // camera access denied
       }
     })();
     return () => {
+      cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
 
-  // Take a snapshot from the live video and classify an N×N grid
+  // Resume camera when returning to capture stage
+  useEffect(() => {
+    if (stage === 'capture' && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play();
+    }
+  }, [stage]);
+
   const snap = async () => {
     await loadOpenCV();
     const el = videoRef.current;
     if (!el || !el.videoWidth || !el.videoHeight) return;
-
+    
     const canvas = document.createElement("canvas");
     canvas.width = el.videoWidth;
     canvas.height = el.videoHeight;
@@ -70,114 +92,161 @@ export default function CaptureStep({
     ctx.drawImage(el, 0, 0);
     const url = canvas.toDataURL("image/jpeg", 0.9);
     setPreviewUrl(url);
-
+    
     const img = await loadImage(url);
     const grid = analyzeImageGrid(img, size);
     setDetected(grid);
+    setStage('review');
   };
 
-  // Allow fixing individual stickers before confirm
   const clickSticker = (i: number, j: number) => {
     if (!detected) return;
-    const idx = supportedPalette.indexOf(detected[i][j]);
-    const next = supportedPalette[(idx + 1) % supportedPalette.length];
-    const copy = detected.map((row) => row.slice()) as ColorLetter[][];
+    const p = supportedPalette;
+    const cur = detected[i][j];
+    const next = p[(p.indexOf(cur) + 1) % p.length];
+    const copy = detected.map((r) => r.slice());
     copy[i][j] = next;
     setDetected(copy);
   };
 
   const confirmFace = () => {
     if (!detected) return;
-    const copy = structuredClone(faces);
-    copy[capturingFace] = detected;
-    setFaces(copy);
-    setDetected(null);
-    setPreviewUrl(null);
-    if (step < ORDER.length - 1) setStep(step + 1);
-    else onScanned(copy);
+    const updated = structuredClone(faces);
+    updated[currentFace] = detected;
+    setFaces(updated);
+    
+    if (step < ORDER.length - 1) {
+      // Move to next face
+      setStep(step + 1);
+      setDetected(null);
+      setPreviewUrl(null);
+      setStage('capture');
+    } else {
+      // All faces captured
+      onScanned(updated);
+    }
   };
 
   const retake = () => {
     setDetected(null);
     setPreviewUrl(null);
+    setStage('capture');
   };
 
   return (
-    <div className="grid" style={{ gap: 12 }}>
-      <div className="row" style={{ alignItems: "end" }}>
-        <Field label={`Capture face ${step + 1} of 6 (${capturingFace})`}>
-          <div className="row">
-            <button className="btn" onClick={snap}>
-              Snap
-            </button>
-          </div>
-        </Field>
-        {previewUrl && (
-          <div className="row" style={{ gap: 8 }}>
-            <button className="btn" onClick={confirmFace}>
-              Confirm
-            </button>
-            <button className="btn secondary" onClick={retake}>
-              Retake
-            </button>
-          </div>
-        )}
+    <div className="grid" style={{ gap: 16 }}>
+      {/* Progress indicator */}
+      <div style={{ textAlign: 'center' }}>
+        <h3>Face {step + 1} of 6: {FACE_LABELS[currentFace]}</h3>
+        <p className="small" style={{ marginBottom: 16 }}>
+          {FACE_INSTRUCTIONS[currentFace]}
+        </p>
       </div>
 
-      {/* Live camera view */}
-      {!previewUrl && (
-        <div className="card" style={{ background: "#0b0e14" }}>
-          <video
-            ref={videoRef}
-            style={{ width: "100%", maxHeight: 360, borderRadius: 8 }}
-            muted
-            playsInline
-          />
+      {/* Previously captured faces */}
+      {step > 0 && (
+        <div>
+          <h4>Previously Captured:</h4>
+          <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+            {ORDER.slice(0, step).map((faceKey) => (
+              <div key={faceKey} style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(3, 16px)`,
+                    gap: 2,
+                    border: '1px solid #ccc',
+                    padding: 4,
+                    borderRadius: 4,
+                  }}
+                >
+                  {faces[faceKey].flatMap((row, i) =>
+                    row.map((c, j) => (
+                      <div
+                        key={`${faceKey}-${i}-${j}`}
+                        style={{ 
+                          width: 16, 
+                          height: 16, 
+                          background: colorLetterToHex[c],
+                          border: '1px solid #666'
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>{faceKey}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Snapshot review with editable grid */}
-      {previewUrl && detected && (
-        <div className="row" style={{ alignItems: "flex-start" }}>
+      {/* Capture Stage */}
+      {stage === 'capture' && (
+        <>
+          <div style={{ textAlign: 'center' }}>
+            <button className="btn" onClick={snap} style={{ fontSize: 18, padding: '12px 24px' }}>
+              📸 Snap Picture
+            </button>
+          </div>
+
           <div className="card" style={{ background: "#0b0e14" }}>
-            <img
-              src={previewUrl}
-              alt="captured face"
-              style={{ maxWidth: 380, borderRadius: 8 }}
+            <video
+              ref={videoRef}
+              muted
+              playsInline
+              style={{ width: "100%", maxHeight: 400, borderRadius: 8 }}
             />
           </div>
-          <div className="card">
-            <h4>Our read (click stickers to change)</h4>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${size}, 40px)`,
-                gap: 6,
-              }}
-            >
+        </>
+      )}
+
+      {/* Review Stage */}
+      {stage === 'review' && previewUrl && detected && (
+        <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
+          <div className="card" style={{ background: "#0b0e14", flex: 1 }}>
+            <img 
+              src={previewUrl} 
+              alt="captured face" 
+              style={{ width: "100%", borderRadius: 8 }} 
+            />
+          </div>
+          
+          <div className="card" style={{ flex: 1 }}>
+            <h4>Detected Colors</h4>
+            <p className="small">Tap any tile to cycle through colors if needed:</p>
+            
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 50px)",
+              gap: 8,
+              justifyContent: 'center',
+              margin: '16px 0'
+            }}>
               {detected.flatMap((row, i) =>
                 row.map((c, j) => (
-                  <button
-                    key={`${i}-${j}`}
+                  <button 
+                    key={`${i}-${j}`} 
                     onClick={() => clickSticker(i, j)}
-                    title={`[${i},${j}]`}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 6,
-                      border: "1px solid #2a3147",
+                    style={{ 
+                      width: 50, 
+                      height: 50, 
+                      borderRadius: 8, 
+                      border: "2px solid #333", 
                       background: colorLetterToHex[c],
-                    }}
+                      cursor: 'pointer'
+                    }} 
                   />
                 ))
               )}
             </div>
-            <div className="row" style={{ marginTop: 10 }}>
-              <button className="btn" onClick={confirmFace}>
-                Confirm
-              </button>
+            
+            <div className="row" style={{ gap: 12, justifyContent: 'center' }}>
               <button className="btn secondary" onClick={retake}>
                 Retake
+              </button>
+              <button className="btn" onClick={confirmFace}>
+                ✓ Confirm Face
               </button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 "use client";
-import { FaceColors, FaceKey, colorLetterToHex, supportedPalette } from "@/lib/facelets";
+import { FaceColors, FaceKey, colorLetterToHex, supportedPalette, ColorLetter } from "@/lib/facelets";
 
 export default function FaceGridEditor({
   size,
@@ -10,13 +10,13 @@ export default function FaceGridEditor({
   size: 2 | 3;
   faces: FaceColors;
   onChange: (f: FaceColors) => void;
-  palette: (keyof typeof supportedPalette)[];
+  palette: ColorLetter[];
 }) {
   const keys: FaceKey[] = ["U", "R", "F", "D", "L", "B"]; // URFDLB
 
   const cycle = (face: FaceKey, i: number, j: number) => {
     const current = faces[face][i][j];
-    const idx = palette.indexOf(current as any);
+    const idx = palette.indexOf(current);
     const next = palette[(idx + 1) % palette.length];
     const copy = structuredClone(faces);
     copy[face][i][j] = next;

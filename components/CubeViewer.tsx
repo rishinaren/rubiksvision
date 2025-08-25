@@ -15,18 +15,22 @@ export default function CubeViewer({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    (async () => {
+    if (!ref.current) return;
+    let cleanupFn: (() => void) | undefined;
+    const doLoad = async () => {
       const el = ref.current!;
       const rect = el.getBoundingClientRect();
-      cleanup = await loadAnimCube(size, el, {
+      cleanupFn = await loadAnimCube(size, el, {
         moves,
-        faces,
+        faces: faces || null,
         width: Math.round(rect.width),
         height: 380,
       });
-    })();
-    return () => cleanup?.();
+    };
+    doLoad();
+    return () => {
+      if (cleanupFn) cleanupFn();
+    };
   }, [size, faces, moves]);
 
   return <div ref={ref} className="ac-container" />;

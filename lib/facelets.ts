@@ -31,7 +31,11 @@ export function buildURFDLBFromFaces(faces: FaceColors, size: 3 | 2): string {
 
   // Expect 3×3
   if (faces.U.length !== 3) throw new Error('Expected 3×3 faces');
-  return order.map(f => pickFace(faces[f], f)).join('');
+  
+  const result = order.map(f => pickFace(faces[f], f)).join('');
+  console.log('Built facelets for solver:', result);
+  
+  return result;
 }
 
 // Embed a scanned 2×2 into a 3×3 corner-equivalent state for Kociemba
@@ -57,4 +61,19 @@ export function embed2x2Into3x3(src: FaceColors): FaceColors {
   mapFace('L', [ [0,0,0,0],[0,1,0,2],[1,0,2,0],[1,1,2,2] ]);
 
   return dst;
+}
+
+/**
+ * Build a facelets parameter string for AnimCube: comma-separated hex colors
+ */
+export function buildAnimCubeFacelets(faces: FaceColors): string {
+  // AnimCube expects faces in the order: Up, Left, Front, Right, Back, Down
+  const order: FaceKey[] = ['U','L','F','R','B','D'];
+  return order
+    .map((face) =>
+      faces[face]
+        .flatMap((row) => row.map((c) => colorLetterToHex[c]))
+        .join(',')
+    )
+    .join(',');
 }

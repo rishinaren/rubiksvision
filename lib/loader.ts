@@ -4,17 +4,20 @@ let cvLoaded: Promise<void> | null = null;
 export function loadOpenCV(): Promise<void> {
   if (cvLoaded) return cvLoaded;
   cvLoaded = new Promise((resolve, reject) => {
-    import("@techstark/opencv-js")
-      .then(() => {
-        const wait = () =>
-          (globalThis as any).cv ? resolve() : setTimeout(wait, 30);
-        wait();
-      })
-      .catch(reject);
+    // Load OpenCV.js from CDN in browser
+    const script = document.createElement("script");
+    script.src = "https://docs.opencv.org/4.x/opencv.js";
+    script.async = true;
+    script.onload = () => {
+      const wait = () =>
+        (globalThis as any).cv ? resolve() : setTimeout(wait, 30);
+      wait();
+    };
+    script.onerror = () => reject(new Error("Failed to load OpenCV.js"));
+    document.body.appendChild(script);
   });
   return cvLoaded;
 }
-
 /**
  * Load AnimCube and mount inside the provided element.
  * IMPORTANT: Pass `id=` so the viewer renders inside `mount`, per AnimCube docs.
@@ -35,8 +38,13 @@ export async function loadAnimCube(
   }
   const id = mount.id;
 
+  // Ensure mount is a valid element
+  if (!(mount instanceof HTMLElement)) {
+    console.warn("Invalid mount element:", mount);
+    return () => {};
+  }
   // Compute size: full card width, fixed height unless caller overrides
-  const width = Math.max(320, Math.round(opts.width ?? mount.clientWidth || 320));
+  const width = Math.max(320, Math.round(opts.width ?? mount.clientWidth ?? 320));
   const height = Math.max(320, Math.round(opts.height ?? 380));
 
   // Load the correct AnimCube script (self-host if you prefer)
@@ -69,12 +77,40 @@ export async function loadAnimCube(
   }
 
   // Clear and run the init script inside the mount (AnimCube renders into div#id)
-  mount.innerHTML = "";
-  const initScript = document.createElement("script");
-  initScript.text = `${
-    size === 2 ? "AnimCube2" : "AnimCube3"
-  }("${params.toString()}")`;
-  mount.appendChild(initScript);
+  try {
+    // Ensure mount is a valid DOM element with required methods
+    if (!mount || typeof mount.innerHTML !== 'string') {
+      console.warn("Cannot mount AnimCube: invalid mount element", mount);
+      return () => {};
+    }
+
+    // Clear the mount element
+    mount.innerHTML = "";
+
+    // Create and append the init script
+    const initScript = document.createElement("script");
+    initScript.textContent = `${size === 2 ? "AnimCube2" : "AnimCube3"}("${params.toString()}")`;
+    
+    // Use a more robust method to append the script
+    if (mount.appendChild && typeof mount.appendChild === 'function') {
+      mount.appendChild(initScript);
+    } else {
+      // Fallback method
+      mount.insertAdjacentElement('beforeend', initScript);
+    }
+  } catch (e) {
+    console.error("Error mounting AnimCube:", e);
+    // Provide a fallback display
+    if (mount && typeof mount.innerHTML === 'string') {
+      mount.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 380px; background: #f0f0f0; border-radius: 8px; color: #666; flex-direction: column;">
+          <div style="font-size: 48px; margin-bottom: 16px;">🧩</div>
+          <div>3D Cube View</div>
+          <div style="font-size: 12px; margin-top: 8px;">Loading...</div>
+        </div>
+      `;
+    }
+  }
 
   // Cleanup
   return () => {
