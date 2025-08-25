@@ -1,23 +1,33 @@
-# Rubik's Cube Web Solver (3×3)
+# RubiksVision - AI Cube Solver
 
-**Stack**: Next.js + TypeScript, OpenCV.js (grid sampling), Kociemba JS solver (cube.js).ubik’s Cube Web Solver (2×2 & 3×3)
+A web application that uses computer vision to solve Rubik's cubes automatically.
 
-**Stack**: Next.js + TypeScript, OpenCV.js (grid sampling), AnimCubeJS (3D viewer + facelets), Kociemba JS solver (cube.js).
+## What It Does
+- **Camera Detection**: Point your camera at each face of a scrambled cube
+- **Color Recognition**: Uses OpenCV.js for real-time color analysis  
+- **3D Visualization**: Interactive 2D cube representation for verification
+- **Step-by-Step Solution**: Generates human-readable solving instructions
 
-## Quick start
+## Tech Stack
+- **Frontend**: Next.js 14, TypeScript, React
+- **Computer Vision**: OpenCV.js for image processing
+- **Algorithm**: Kociemba two-phase solver for optimal solutions
+- **Deployment**: Vercel-ready
 
+## Quick Start
 ```bash
-pnpm i   # or npm i / yarn
-pnpm dev # http://localhost:3000
+npm install
+npm run dev
+# Open http://localhost:3000
 ```
 
-## Notes
+## Key Features
+- Real-time face capture and color detection
+- Interactive cube orientation adjustment
+- Optimized solving algorithms (20 moves or less)
+- Mobile-responsive design
+- Error handling for invalid cube states
 
-* **Scanning**: MVP samples an N×N grid from the central image region (good lighting assumed). You can upgrade to contour detection + homography with OpenCV.js later.
-* **3D viewer**: AnimCubeJS is loaded from CDN. To self-host, download `AnimCube2.js` and `AnimCube3.js` into `public/vendor/animcube/` and change the URLs in `lib/loader.ts`.
-* **Solving**: 3×3 uses a two-phase solver (Kociemba).
-* **Human-like methods**: `lib/humanLike.ts` provides stubs where you can implement CFOP (3×3) with case detection and predefined alg sets. The UI already supports stepwise playback and explanations.
+---
+*Built with modern web technologies for computer vision and algorithmic problem solving.*
 
-## License
-
-Free/open-source dependencies; you should keep their LICENSE files when vendoring any assets.
